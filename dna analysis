@@ -1,0 +1,65 @@
+# DNA_analysis.py
+# Bioinformatics Mini-Project: DNA Sequence Analysis
+# Author: [Your Name]
+# Date: 26 Dec 2025
+
+from Bio.Seq import Seq
+from Bio import SeqIO
+from Bio.SeqUtils import GC
+import re
+
+# ---------- Input DNA Sequence ----------
+dna_sequence = """YOUR_DNA_SEQUENCE_HERE"""
+seq = Seq(dna_sequence.upper())
+
+# ---------- 1. GC Content ----------
+gc_content = GC(seq)
+print(f"GC Content: {gc_content:.2f}%")
+
+# ---------- 2. Find Open Reading Frames (ORFs) ----------
+def find_orfs(dna_seq, min_length=100):
+    orfs = []
+    for strand, nuc in [(+1, dna_seq), (-1, dna_seq.reverse_complement())]:
+        for frame in range(3):
+            trans = nuc[frame:].translate(to_stop=False)
+            aa_seq = str(trans)
+            for match in re.finditer("M.?\", aa_seq):  # ORF starts with M, ends with *
+                start = match.start() * 3 + frame
+                end = match.end() * 3 + frame
+                if end - start >= min_length:
+                    orfs.append({
+                        'strand': strand,
+                        'frame': frame+1,
+                        'start': start,
+                        'end': end,
+                        'aa_sequence': aa_seq[match.start():match.end()]
+                    })
+    return orfs
+
+orfs = find_orfs(seq)
+print(f"Number of ORFs found: {len(orfs)}")
+for i, orf in enumerate(orfs):
+    print(f"\nORF {i+1}:")
+    print(f" Strand: {'+' if orf['strand']==1 else '-'}")
+    print(f" Frame: {orf['frame']}")
+    print(f" Start: {orf['start']}")
+    print(f" End: {orf['end']}")
+    print(f" Protein sequence: {orf['aa_sequence']}")
+
+# ---------- 3. Translate the longest ORF ----------
+if orfs:
+    longest_orf = max(orfs, key=lambda x: len(x['aa_sequence']))
+    protein_seq = longest_orf['aa_sequence']
+    print("\nLongest ORF Translation:")
+    print(protein_seq)
+else:
+    print("No ORFs found!")
+
+# ---------- 4. Save DNA and Protein sequences to files ----------
+with open("DNA_sequence.fasta", "w") as f:
+    f.write(f">Unknown_DNA_sequence\n{seq}\n")
+
+with open("Protein_sequence.fasta", "w") as f:
+    f.write(f">Longest_ORF_Protein\n{protein_seq}\n")
+
+print("\nDNA and Protein sequences saved to files!")
